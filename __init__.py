@@ -71,10 +71,10 @@ def register():
             km = kc.keymaps.new(name='Screen', space_type='EMPTY')
         # 为 view3d.zoom 注册 ANY 事件
         kmi_3d = km.keymap_items.new("view3d.zoom", 'RIGHTMOUSE', 'PRESS', alt=True)
-        kmi_3d.active = False
+        kmi_3d.active = True
         # 为 view2d.zoom 注册 ANY 事件
         kmi_2d = km.keymap_items.new("view2d.zoom", 'RIGHTMOUSE', 'ANY', alt=True)
-        kmi_2d.active = False # 默认不激活，等待按钮开启
+        kmi_2d.active = True # 默认不激活，等待按钮开启
     
     # 3. 添加到顶部栏
     bpy.types.VIEW3D_HT_header.append(draw_nav_button)
