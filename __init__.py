@@ -34,7 +34,7 @@ def toggle_maya_nav_keymaps(is_enabled):
             # 找到我们注册的 Alt + 中键 平移操作 (3D)
             if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view3d.move":
                 kmi.active = is_enabled
-            # 找到我们注册的 Alt + Ctrl + 中键 切换正交视图操作
+            # 找到我们注册的 Alt + Ctrl + 中键 切换正交视图操作 (四个方向)
             if kmi.type == 'MIDDLEMOUSE' and kmi.alt and kmi.ctrl and kmi.idname == "view3d.view_axis":
                 kmi.active = is_enabled
     
@@ -77,7 +77,7 @@ def register():
     bpy.types.Scene.maya_nav_enabled = bpy.props.BoolProperty(
         name="Maya Navigation",
         description="开启后使用 Alt+右键 左右滑动缩放，Alt+中键平移视图，Alt+Ctrl+中键切换正交视图",
-        default=False,
+        default=True,
         update=update_maya_nav
     )
     
@@ -103,9 +103,36 @@ def register():
         # 为 view3d.move 注册 ANY 事件 (Alt+中键)
         kmi_pan_3d = km_3dview.keymap_items.new("view3d.move", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True)
         kmi_pan_3d.active = True
-        # 为 view3d.view_axis 注册 ANY 事件 (Alt+Ctrl+中键) - 切换正交视图
-        kmi_view_axis = km_3dview.keymap_items.new("view3d.view_axis", 'MIDDLEMOUSE', 'ANY', alt=True, ctrl=True)
-        kmi_view_axis.active = True
+
+        # 上视图 (NORTH)
+        kmi_view_top = km_3dview.keymap_items.new("view3d.view_axis", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True, ctrl=True)
+        # 注意：direction 是 kmi 对象的成员，控制触发条件
+        kmi_view_top.direction = 'NORTH' 
+        # 注意：type 是操作符 view3d.view_axis 的内部参数
+        kmi_view_top.properties.type = 'TOP'
+        kmi_view_top.properties.relative = True  # 勾选“相对”选项
+        kmi_view_top.active = True
+
+        # 下视图 (SOUTH)
+        kmi_view_bottom = km_3dview.keymap_items.new("view3d.view_axis", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True, ctrl=True)
+        kmi_view_bottom.direction = 'SOUTH'
+        kmi_view_bottom.properties.type = 'BOTTOM'
+        kmi_view_bottom.properties.relative = True  # 勾选“相对”选项
+        kmi_view_bottom.active = True
+
+        # 右视图 (EAST)
+        kmi_view_right = km_3dview.keymap_items.new("view3d.view_axis", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True, ctrl=True)
+        kmi_view_right.direction = 'EAST'
+        kmi_view_right.properties.type = 'RIGHT'
+        kmi_view_right.properties.relative = True  # 勾选“相对”选项
+        kmi_view_right.active = True
+
+        # 左视图 (WEST)
+        kmi_view_left = km_3dview.keymap_items.new("view3d.view_axis", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True, ctrl=True)
+        kmi_view_left.direction = 'WEST'
+        kmi_view_left.properties.type = 'LEFT'
+        kmi_view_left.properties.relative = True  # 勾选“相对”选项
+        kmi_view_left.active = True
         
         # 获取或创建 View2D 键位映射 (用于 2D 平移)
         km_view2d = kc.keymaps.get('View2D')
