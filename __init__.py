@@ -19,11 +19,31 @@ def toggle_maya_nav_keymaps(is_enabled):
     if not kc:
         return
 
-    km = kc.keymaps.get('Screen')
-    if km:
-        for kmi in km.keymap_items:
+    # Screen 键位映射（用于全局缩放操作）
+    km_screen = kc.keymaps.get('Screen')
+    if km_screen:
+        for kmi in km_screen.keymap_items:
             # 找到我们注册的 Alt + 右键 缩放操作 (3D 和 2D)
             if kmi.type == 'RIGHTMOUSE' and kmi.alt and kmi.idname in {"view3d.zoom", "view2d.zoom"}:
+                kmi.active = is_enabled
+    
+    # 3D View 键位映射（用于 3D 操作）
+    km_3dview = kc.keymaps.get('3D View')
+    if km_3dview:
+        for kmi in km_3dview.keymap_items:
+            # 找到我们注册的 Alt + 中键 平移操作 (3D)
+            if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view3d.move":
+                kmi.active = is_enabled
+            # 找到我们注册的 Alt + Ctrl + 中键 切换正交视图操作
+            if kmi.type == 'MIDDLEMOUSE' and kmi.alt and kmi.ctrl and kmi.idname == "view3d.view_axis":
+                kmi.active = is_enabled
+    
+    # View2D 键位映射（用于 2D 平移）
+    km_view2d = kc.keymaps.get('View2D')
+    if km_view2d:
+        for kmi in km_view2d.keymap_items:
+            # 找到我们注册的 Alt + 中键 平移操作 (2D)
+            if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view2d.pan":
                 kmi.active = is_enabled
 
 def update_maya_nav(self, context):
@@ -56,7 +76,7 @@ def register():
     # 1. 注册场景变量
     bpy.types.Scene.maya_nav_enabled = bpy.props.BoolProperty(
         name="Maya Navigation",
-        description="开启后使用 Alt+右键 左右滑动缩放",
+        description="开启后使用 Alt+右键 左右滑动缩放，Alt+中键平移视图，Alt+Ctrl+中键切换正交视图",
         default=False,
         update=update_maya_nav
     )
@@ -65,16 +85,35 @@ def register():
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     if kc:
-        # 获取或创建 Screen 键位映射
-        km = kc.keymaps.get('Screen')
-        if not km:
-            km = kc.keymaps.new(name='Screen', space_type='EMPTY')
+        # 获取或创建 Screen 键位映射（用于缩放操作）
+        km_screen = kc.keymaps.get('Screen')
+        if not km_screen:
+            km_screen = kc.keymaps.new(name='Screen', space_type='EMPTY')
         # 为 view3d.zoom 注册 ANY 事件
-        kmi_3d = km.keymap_items.new("view3d.zoom", 'RIGHTMOUSE', 'PRESS', alt=True)
+        kmi_3d = km_screen.keymap_items.new("view3d.zoom", 'RIGHTMOUSE', 'PRESS', alt=True)
         kmi_3d.active = True
         # 为 view2d.zoom 注册 ANY 事件
-        kmi_2d = km.keymap_items.new("view2d.zoom", 'RIGHTMOUSE', 'ANY', alt=True)
+        kmi_2d = km_screen.keymap_items.new("view2d.zoom", 'RIGHTMOUSE', 'ANY', alt=True)
         kmi_2d.active = True # 默认不激活，等待按钮开启
+        
+        # 获取或创建 3D View 键位映射（用于 3D 操作）
+        km_3dview = kc.keymaps.get('3D View')
+        if not km_3dview:
+            km_3dview = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+        # 为 view3d.move 注册 ANY 事件 (Alt+中键)
+        kmi_pan_3d = km_3dview.keymap_items.new("view3d.move", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True)
+        kmi_pan_3d.active = True
+        # 为 view3d.view_axis 注册 ANY 事件 (Alt+Ctrl+中键) - 切换正交视图
+        kmi_view_axis = km_3dview.keymap_items.new("view3d.view_axis", 'MIDDLEMOUSE', 'ANY', alt=True, ctrl=True)
+        kmi_view_axis.active = True
+        
+        # 获取或创建 View2D 键位映射 (用于 2D 平移)
+        km_view2d = kc.keymaps.get('View2D')
+        if not km_view2d:
+            km_view2d = kc.keymaps.new(name='View2D', space_type='EMPTY')
+        # 为 view2d.pan 注册 ANY 事件 (Alt+中键)
+        kmi_pan_2d = km_view2d.keymap_items.new("view2d.pan", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True)
+        kmi_pan_2d.active = True
     
     # 3. 添加到顶部栏
     bpy.types.VIEW3D_HT_header.append(draw_nav_button)
@@ -83,19 +122,40 @@ def unregister():
     # 清理 UI
     bpy.types.VIEW3D_HT_header.remove(draw_nav_button)
     
-    # 清理快捷键 (从 Screen 键位映射中移除我们添加的键位)
+    # 清理快捷键 (从 Screen、3D View 和 View2D 键位映射中移除我们添加的键位)
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     if kc:
-        km = kc.keymaps.get('Screen')
-        if km:
-            # 需要复制列表，因为在遍历时删除会改变列表
+        # 清理 Screen 键位映射 (缩放操作)
+        km_screen = kc.keymaps.get('Screen')
+        if km_screen:
             kmis_to_remove = []
-            for kmi in km.keymap_items:
+            for kmi in km_screen.keymap_items:
                 if kmi.type == 'RIGHTMOUSE' and kmi.alt and kmi.idname in {"view3d.zoom", "view2d.zoom"}:
                     kmis_to_remove.append(kmi)
             for kmi in kmis_to_remove:
-                km.keymap_items.remove(kmi)
+                km_screen.keymap_items.remove(kmi)
+        
+        # 清理 3D View 键位映射 (3D 平移和正交视图切换)
+        km_3dview = kc.keymaps.get('3D View')
+        if km_3dview:
+            kmis_to_remove = []
+            for kmi in km_3dview.keymap_items:
+                if (kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view3d.move") or \
+                   (kmi.type == 'MIDDLEMOUSE' and kmi.alt and kmi.ctrl and kmi.idname == "view3d.view_axis"):
+                    kmis_to_remove.append(kmi)
+            for kmi in kmis_to_remove:
+                km_3dview.keymap_items.remove(kmi)
+        
+        # 清理 View2D 键位映射 (2D 平移)
+        km_view2d = kc.keymaps.get('View2D')
+        if km_view2d:
+            kmis_to_remove = []
+            for kmi in km_view2d.keymap_items:
+                if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view2d.pan":
+                    kmis_to_remove.append(kmi)
+            for kmi in kmis_to_remove:
+                km_view2d.keymap_items.remove(kmi)
     
     # 删除变量
     del bpy.types.Scene.maya_nav_enabled
