@@ -43,6 +43,25 @@ def toggle_maya_nav_keymaps(is_enabled):
             # 找到我们注册的 Alt + 中键 平移操作 (2D)
             if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view2d.pan":
                 kmi.active = is_enabled
+    
+    # Frames 键位映射（用于帧操作）
+    km_frames = kc.keymaps.get('Frames')
+    if km_frames:
+        for kmi in km_frames.keymap_items:
+            # 找到我们注册的 ALT+Q 和 ALT+E 关键帧跳转操作
+            if kmi.type in ['Q', 'E'] and kmi.alt and kmi.idname == "screen.keyframe_jump":
+                kmi.active = is_enabled
+    
+    # Animation 键位映射（用于动画操作）
+    km_anim_channels = kc.keymaps.get('Animation')
+    if km_anim_channels:
+        for kmi in km_anim_channels.keymap_items:
+            # 找到我们注册的 SHIFT+空格键 时间线跳转操作
+            if kmi.type == 'SPACE' and kmi.shift and kmi.idname == "screen.frame_jump":
+                kmi.active = is_enabled
+            # 找到我们注册的 ALT+S 饼菜单调用操作
+            if kmi.type == 'S' and kmi.alt and kmi.idname == "wm.call_menu_pie":
+                kmi.active = is_enabled
 
 def update_maya_nav(self, context):
     """当顶部按钮被点击时触发"""
@@ -134,6 +153,37 @@ def register():
         # 为 view2d.zoom 注册 ANY 事件 (Alt+右键)
         kmi_zoom_2d = km_view2d.keymap_items.new("view2d.zoom", 'RIGHTMOUSE', 'PRESS', alt=True)
         kmi_zoom_2d.active = True
+        
+        # 添加 Frames 键位映射 (帧的类别)
+        km_frames = kc.keymaps.get('Frames')
+        if not km_frames:
+            km_frames = kc.keymaps.new(name='Frames', space_type='EMPTY')
+        
+        # 为 screen.keyframe_jump 注册 ALT+Q (上一个关键帧)
+        kmi_keyframe_prev = km_frames.keymap_items.new("screen.keyframe_jump", 'Q', 'PRESS', alt=True)
+        kmi_keyframe_prev.properties.next = False  # 上一个关键帧
+        kmi_keyframe_prev.active = True
+        
+        # 为 screen.keyframe_jump 注册 ALT+E (下一个关键帧)
+        kmi_keyframe_next = km_frames.keymap_items.new("screen.keyframe_jump", 'E', 'PRESS', alt=True)
+        kmi_keyframe_next.properties.next = True   # 下一个关键帧
+        kmi_keyframe_next.active = True
+
+        
+        # 添加 Animation 键位映射 (动画的类别)
+        km_anim_channels = kc.keymaps.get('Animation')
+        if not km_anim_channels:
+            km_anim_channels = kc.keymaps.new(name='Animation', space_type='EMPTY')
+        
+        # 为 screen.frame_jump 注册 SHIFT+空格键 (跳转到时间线开始)
+        kmi_frame_start = km_anim_channels.keymap_items.new("screen.frame_jump", 'SPACE', 'PRESS', shift=True)
+        kmi_frame_start.properties.end = False  # 跳转到开始
+        kmi_frame_start.active = True
+        
+        # 为 wm.call_menu_pie 注册 ALT+S (调用关键帧插入饼菜单)
+        kmi_pie_menu = km_anim_channels.keymap_items.new("wm.call_menu_pie", 'S', 'PRESS', alt=True)
+        kmi_pie_menu.properties.name = "ANIM_MT_keyframe_insert_pie"  # 饼菜单名称
+        kmi_pie_menu.active = True
     
     # 3. 添加到顶部栏
     bpy.types.VIEW3D_HT_header.append(draw_nav_button)
@@ -168,6 +218,33 @@ def unregister():
                     kmis_to_remove.append(kmi)
             for kmi in kmis_to_remove:
                 km_view2d.keymap_items.remove(kmi)
+        
+        # 清理 Frames 键位映射 (帧操作)
+        km_frames = kc.keymaps.get('Frames')
+        if km_frames:
+            kmis_to_remove = []
+            for kmi in km_frames.keymap_items:
+                # 找到我们注册的 ALT+Q 和 ALT+E 关键帧跳转操作
+                if kmi.type in ['Q', 'E'] and kmi.alt and kmi.idname == "screen.keyframe_jump":
+                    kmis_to_remove.append(kmi)
+
+            for kmi in kmis_to_remove:
+                km_frames.keymap_items.remove(kmi)
+        
+        # 清理 Animation Channels 键位映射 (动画操作)
+        km_anim_channels = kc.keymaps.get('Animation')
+        if km_anim_channels:
+            kmis_to_remove = []
+            for kmi in km_anim_channels.keymap_items:
+                # 找到我们注册的 SHIFT+空格键 时间线跳转操作
+                if kmi.type == 'SPACE' and kmi.shift and kmi.idname == "screen.frame_jump":
+                    kmis_to_remove.append(kmi)
+
+                # 找到我们注册的 ALT+S 饼菜单调用操作
+                if kmi.type == 'S' and kmi.alt and kmi.idname == "wm.call_menu_pie":
+                    kmis_to_remove.append(kmi)
+            for kmi in kmis_to_remove:
+                km_anim_channels.keymap_items.remove(kmi)
     
     # 删除变量
     del bpy.types.Scene.maya_nav_enabled
