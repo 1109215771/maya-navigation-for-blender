@@ -62,6 +62,14 @@ def toggle_maya_nav_keymaps(is_enabled):
             # 找到我们注册的 ALT+S 饼菜单调用操作
             if kmi.type == 'S' and kmi.alt and kmi.idname == "wm.call_menu_pie":
                 kmi.active = is_enabled
+    
+    # Window 键位映射（用于窗口操作）
+    km_window = kc.keymaps.get('Window')
+    if km_window:
+        for kmi in km_window.keymap_items:
+            # 找到我们注册的 D 键变换原点操作
+            if kmi.type == 'D' and kmi.idname == "wm.context_toggle" and kmi.properties.data_path == "scene.tool_settings.use_transform_data_origin":
+                kmi.active = is_enabled
 
 def update_maya_nav(self, context):
     """当顶部按钮被点击时触发"""
@@ -184,6 +192,18 @@ def register():
         kmi_pie_menu = km_anim_channels.keymap_items.new("wm.call_menu_pie", 'S', 'PRESS', alt=True)
         kmi_pie_menu.properties.name = "ANIM_MT_keyframe_insert_pie"  # 饼菜单名称
         kmi_pie_menu.active = True
+        
+        # 添加 Window 键位映射 (窗口类别)
+        km_window = kc.keymaps.get('Window')
+        if not km_window:
+            km_window = kc.keymaps.new(name='Window', space_type='EMPTY')
+        
+        # 为 scene.tool_settings.use_transform_data_origin 注册 D 键
+        # 第一行：操作符类别 wm.context_toggle
+        # 第二行：具体命令 scene.tool_settings.use_transform_data_origin
+        kmi_transform_origin = km_window.keymap_items.new("wm.context_toggle", 'D', 'PRESS')
+        kmi_transform_origin.properties.data_path = "scene.tool_settings.use_transform_data_origin"
+        kmi_transform_origin.active = True
     
     # 3. 添加到顶部栏
     bpy.types.VIEW3D_HT_header.append(draw_nav_button)
@@ -245,6 +265,17 @@ def unregister():
                     kmis_to_remove.append(kmi)
             for kmi in kmis_to_remove:
                 km_anim_channels.keymap_items.remove(kmi)
+        
+        # 清理 Window 键位映射 (窗口操作)
+        km_window = kc.keymaps.get('Window')
+        if km_window:
+            kmis_to_remove = []
+            for kmi in km_window.keymap_items:
+                # 找到我们注册的 D 键变换原点操作
+                if kmi.type == 'D' and kmi.idname == "wm.context_toggle" and kmi.properties.data_path == "scene.tool_settings.use_transform_data_origin":
+                    kmis_to_remove.append(kmi)
+            for kmi in kmis_to_remove:
+                km_window.keymap_items.remove(kmi)
     
     # 删除变量
     del bpy.types.Scene.maya_nav_enabled
