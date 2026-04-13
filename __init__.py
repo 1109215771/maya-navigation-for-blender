@@ -44,6 +44,17 @@ def toggle_maya_nav_keymaps(is_enabled):
             if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "view2d.pan":
                 kmi.active = is_enabled
     
+    # Image 键位映射（用于图像平移和缩放）
+    km_image = kc.keymaps.get('Image')
+    if km_image:
+        for kmi in km_image.keymap_items:
+            # 找到我们注册的 Alt + 右键 缩放操作 (Image)
+            if kmi.type == 'RIGHTMOUSE' and kmi.alt and kmi.idname == "image.view_zoom":
+                kmi.active = is_enabled
+            # 找到我们注册的 Alt + 中键 平移操作 (Image)
+            if kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "image.view_pan":
+                kmi.active = is_enabled
+    
     # Frames 键位映射（用于帧操作）
     km_frames = kc.keymaps.get('Frames')
     if km_frames:
@@ -162,6 +173,17 @@ def register():
         kmi_zoom_2d = km_view2d.keymap_items.new("view2d.zoom", 'RIGHTMOUSE', 'PRESS', alt=True)
         kmi_zoom_2d.active = True
         
+        # 获取或创建 Image 键位映射 (用于图像平移和缩放)
+        km_image = kc.keymaps.get('Image')
+        if not km_image:
+            km_image = kc.keymaps.new(name='Image', space_type='IMAGE_EDITOR')
+        # 为 image.view_pan 注册 ANY 事件 (Alt+中键)
+        kmi_pan_image = km_image.keymap_items.new("image.view_pan", 'MIDDLEMOUSE', 'CLICK_DRAG', alt=True)
+        kmi_pan_image.active = True
+        # 为 image.view_zoom 注册 ANY 事件 (Alt+右键)
+        kmi_zoom_image = km_image.keymap_items.new("image.view_zoom", 'RIGHTMOUSE', 'PRESS', alt=True)
+        kmi_zoom_image.active = True
+        
         # 添加 Frames 键位映射 (帧的类别)
         km_frames = kc.keymaps.get('Frames')
         if not km_frames:
@@ -238,6 +260,17 @@ def unregister():
                     kmis_to_remove.append(kmi)
             for kmi in kmis_to_remove:
                 km_view2d.keymap_items.remove(kmi)
+        
+        # 清理 Image 键位映射 (图像平移和缩放)
+        km_image = kc.keymaps.get('Image')
+        if km_image:
+            kmis_to_remove = []
+            for kmi in km_image.keymap_items:
+                if (kmi.type == 'RIGHTMOUSE' and kmi.alt and kmi.idname == "image.view_zoom") or \
+                   (kmi.type == 'MIDDLEMOUSE' and kmi.alt and not kmi.ctrl and kmi.idname == "image.view_pan"):
+                    kmis_to_remove.append(kmi)
+            for kmi in kmis_to_remove:
+                km_image.keymap_items.remove(kmi)
         
         # 清理 Frames 键位映射 (帧操作)
         km_frames = kc.keymaps.get('Frames')
