@@ -3,7 +3,7 @@ bl_info = {
     "author": "Your Name",
     "version": (1.2),
     "blender": (3.0, 0),
-    "location": "View3D > Header",
+    "location": "Topbar",
     "description": "一键切换 Maya 风格导航，开关关闭时恢复原生操作",
     "category": "Interface",
 }
@@ -102,13 +102,22 @@ def draw_nav_button(self, context):
     layout = self.layout
     scene = context.scene
     
-    # 这里的 align=True 保证它能紧凑地排在可见性图标左边
+    # 在顶部栏最右边添加按钮
     row = layout.row(align=True)
     row.prop(scene, "maya_nav_enabled", text="Maya Nav", toggle=True)
 
 # --- 注册与注销 ---
 
 def register():
+    if hasattr(bpy.types.Scene, "maya_nav_enabled"):
+        # Blender 重载插件时属性可能已经存在，但 UI 回调仍需确保挂载。
+        try:
+            bpy.types.TOPBAR_HT_upper_bar.remove(draw_nav_button)
+        except (ValueError, RuntimeError):
+            pass
+        bpy.types.TOPBAR_HT_upper_bar.append(draw_nav_button)
+        return
+
     # 1. 注册场景变量
     bpy.types.Scene.maya_nav_enabled = bpy.props.BoolProperty(
         name="Maya Navigation",
@@ -227,12 +236,15 @@ def register():
         kmi_transform_origin.properties.data_path = "scene.tool_settings.use_transform_data_origin"
         kmi_transform_origin.active = True
     
-    # 3. 添加到顶部栏
-    bpy.types.VIEW3D_HT_header.append(draw_nav_button)
+    # 3. 添加到 Blender 顶部栏（最右边）
+    bpy.types.TOPBAR_HT_upper_bar.append(draw_nav_button)
 
 def unregister():
     # 清理 UI
-    bpy.types.VIEW3D_HT_header.remove(draw_nav_button)
+    try:
+        bpy.types.TOPBAR_HT_upper_bar.remove(draw_nav_button)
+    except (ValueError, RuntimeError):
+        pass
     
     # 清理快捷键 (从 3D View 和 View2D 键位映射中移除我们添加的键位)
     wm = bpy.context.window_manager
@@ -311,7 +323,8 @@ def unregister():
                 km_window.keymap_items.remove(kmi)
     
     # 删除变量
-    del bpy.types.Scene.maya_nav_enabled
+    if hasattr(bpy.types.Scene, "maya_nav_enabled"):
+        del bpy.types.Scene.maya_nav_enabled
 
 if __name__ == "__main__":
     register()
