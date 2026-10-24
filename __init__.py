@@ -1,8 +1,8 @@
 bl_info = {
     "name": "Maya Navigation Mode",
-    "author": "Your Name",
-    "version": (1.2),
-    "blender": (3.0, 0),
+    "author": "Liya",
+    "version": (1, 2, 0),
+    "blender": (4, 2, 0),
     "location": "Topbar",
     "description": "一键切换 Maya 风格导航，开关关闭时恢复原生操作",
     "category": "Interface",

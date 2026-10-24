@@ -1,0 +1,10 @@
+schema_version = "1.0.0"
+id = "maya_navigation"
+version = "1.2.0"
+name = "Maya Navigation Mode"
+tagline = "Toggle Maya-style viewport navigation"
+maintainer = "Liya"
+type = "add-on"
+tags = ["3D View"]
+blender_version_min = "4.2.0"
+license = ["SPDX:GPL-3.0-or-later"]
