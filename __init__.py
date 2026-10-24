@@ -99,10 +99,13 @@ def update_maya_nav(self, context):
 # --- UI 绘制 ---
 
 def draw_nav_button(self, context):
+    if context.region and context.region.alignment == 'RIGHT':
+        return
+
     layout = self.layout
     scene = context.scene
     
-    # 在顶部栏最右边添加按钮
+    # 只在工作区列表一侧显示，避免在 View Layer 一侧重复显示。
     row = layout.row(align=True)
     row.prop(scene, "maya_nav_enabled", text="Maya Nav", toggle=True)
 
@@ -236,7 +239,7 @@ def register():
         kmi_transform_origin.properties.data_path = "scene.tool_settings.use_transform_data_origin"
         kmi_transform_origin.active = True
     
-    # 3. 添加到 Blender 顶部栏（最右边）
+    # 3. 添加到 Blender 顶部栏
     bpy.types.TOPBAR_HT_upper_bar.append(draw_nav_button)
 
 def unregister():
