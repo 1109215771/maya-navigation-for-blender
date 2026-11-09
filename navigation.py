@@ -52,13 +52,26 @@ def toggle_maya_nav_keymaps(is_enabled):
             # 找到我们注册的 ALT+Q 和 ALT+E 关键帧跳转操作
             if kmi.type in ['Q', 'E'] and kmi.alt and kmi.idname == "screen.keyframe_jump":
                 kmi.active = is_enabled
+            # 找到我们注册的 CTRL+SHIFT+空格键时间线跳转操作
+            if (
+                kmi.type == 'SPACE'
+                and kmi.ctrl
+                and kmi.shift
+                and kmi.idname == "screen.frame_jump"
+            ):
+                kmi.active = is_enabled
     
     # Animation 键位映射（用于动画操作）
     km_anim_channels = kc.keymaps.get('Animation')
     if km_anim_channels:
         for kmi in km_anim_channels.keymap_items:
-            # 找到我们注册的 SHIFT+空格键 时间线跳转操作
-            if kmi.type == 'SPACE' and kmi.shift and kmi.idname == "screen.frame_jump":
+            # 找到我们注册的 SHIFT+空格键时间线跳转操作
+            if (
+                kmi.type == 'SPACE'
+                and kmi.shift
+                and not kmi.ctrl
+                and kmi.idname == "screen.frame_jump"
+            ):
                 kmi.active = is_enabled
             # 找到我们注册的 ALT+S 饼菜单调用操作
             if kmi.type == 'S' and kmi.alt and kmi.idname == "wm.call_menu_pie":
@@ -201,6 +214,13 @@ def register():
         kmi_keyframe_next.properties.next = True   # 下一个关键帧
         kmi_keyframe_next.active = True
 
+        # 为 screen.frame_jump 注册 CTRL+SHIFT+空格键 (跳转到时间线开始)
+        kmi_frame_start_ctrl = km_frames.keymap_items.new(
+            "screen.frame_jump", 'SPACE', 'PRESS', ctrl=True, shift=True
+        )
+        kmi_frame_start_ctrl.properties.end = False
+        kmi_frame_start_ctrl.active = True
+
         
         # 添加 Animation 键位映射 (动画的类别)
         km_anim_channels = kc.keymaps.get('Animation')
@@ -228,6 +248,13 @@ def register():
         kmi_transform_origin = km_window.keymap_items.new("wm.context_toggle", 'D', 'PRESS')
         kmi_transform_origin.properties.data_path = "scene.tool_settings.use_transform_data_origin"
         kmi_transform_origin.active = True
+
+        # 为 wm.call_menu_pie 注册全局 ALT+SHIFT+S (调用关键帧插入饼菜单)
+        kmi_pie_menu_global = km_window.keymap_items.new(
+            "wm.call_menu_pie", 'S', 'PRESS', alt=True, shift=True
+        )
+        kmi_pie_menu_global.properties.name = "ANIM_MT_keyframe_insert_pie"
+        kmi_pie_menu_global.active = True
     
     # 3. 添加到 Blender 顶部栏
     bpy.types.TOPBAR_HT_upper_bar.append(draw_nav_button)
@@ -282,8 +309,16 @@ def unregister():
         if km_frames:
             kmis_to_remove = []
             for kmi in km_frames.keymap_items:
-                # 找到我们注册的 ALT+Q 和 ALT+E 关键帧跳转操作
-                if kmi.type in ['Q', 'E'] and kmi.alt and kmi.idname == "screen.keyframe_jump":
+                # 找到我们注册的 ALT+Q、ALT+E 和 CTRL+SHIFT+空格键操作
+                if (
+                    (kmi.type in ['Q', 'E'] and kmi.alt and kmi.idname == "screen.keyframe_jump")
+                    or (
+                        kmi.type == 'SPACE'
+                        and kmi.ctrl
+                        and kmi.shift
+                        and kmi.idname == "screen.frame_jump"
+                    )
+                ):
                     kmis_to_remove.append(kmi)
 
             for kmi in kmis_to_remove:
@@ -294,8 +329,13 @@ def unregister():
         if km_anim_channels:
             kmis_to_remove = []
             for kmi in km_anim_channels.keymap_items:
-                # 找到我们注册的 SHIFT+空格键 时间线跳转操作
-                if kmi.type == 'SPACE' and kmi.shift and kmi.idname == "screen.frame_jump":
+                # 找到我们注册的 SHIFT+空格键时间线跳转操作
+                if (
+                    kmi.type == 'SPACE'
+                    and kmi.shift
+                    and not kmi.ctrl
+                    and kmi.idname == "screen.frame_jump"
+                ):
                     kmis_to_remove.append(kmi)
 
                 # 找到我们注册的 ALT+S 饼菜单调用操作
@@ -304,13 +344,22 @@ def unregister():
             for kmi in kmis_to_remove:
                 km_anim_channels.keymap_items.remove(kmi)
         
-        # 清理 Window 键位映射 (窗口操作)
+        # 清理 Window 键位映射 (窗口操作和全局关键帧菜单)
         km_window = kc.keymaps.get('Window')
         if km_window:
             kmis_to_remove = []
             for kmi in km_window.keymap_items:
                 # 找到我们注册的 D 键变换原点操作
                 if kmi.type == 'D' and kmi.idname == "wm.context_toggle" and kmi.properties.data_path == "scene.tool_settings.use_transform_data_origin":
+                    kmis_to_remove.append(kmi)
+                # 找到我们注册的 ALT+SHIFT+S 全局关键帧饼菜单
+                if (
+                    kmi.type == 'S'
+                    and kmi.alt
+                    and kmi.shift
+                    and kmi.idname == "wm.call_menu_pie"
+                    and kmi.properties.name == "ANIM_MT_keyframe_insert_pie"
+                ):
                     kmis_to_remove.append(kmi)
             for kmi in kmis_to_remove:
                 km_window.keymap_items.remove(kmi)
